@@ -47,6 +47,8 @@ export default function socketHandler(io) {
       "join_conversation",
       async ({ conversationId }) => {
         try {
+          console.log("joining convo", conversationId);
+          
           const conversation =
             await Conversation.findOne({
               _id: conversationId,
