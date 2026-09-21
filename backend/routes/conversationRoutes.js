@@ -36,7 +36,7 @@ router.post("/", authMiddleware, async (req, res) => {
       },
     }).populate(
       "participants",
-      "username email avatar status"
+      "username email avatar status lastSeen"
     );
 
     // Existing conversation
@@ -62,7 +62,7 @@ router.post("/", authMiddleware, async (req, res) => {
     // Populate users after creation
     conversation = await conversation.populate(
       "participants",
-      "username email avatar status"
+      "username email avatar status lastSeen"
     );
 
     return res.status(201).json(conversation);

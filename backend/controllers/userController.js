@@ -1,19 +1,21 @@
 import relationship from "../models/relationship.js";
 import Conversation from "../models/conversation.js";
+import Message from "../models/message.js";
 
 const getUsers = async (req, res) => {
   try {
     const myId = req.user._id;
 
-    const relationships = await relationship.find({
-      $or: [
-        { userA: myId },
-        { userB: myId }
-      ],
-      connectionStatus: "accepted"
-    })
-      .populate("userA", "username displayName avatar")
-      .populate("userB", "username displayName avatar");
+    const relationships = await relationship
+      .find({
+        $or: [
+          { userA: myId },
+          { userB: myId }
+        ],
+        connectionStatus: "accepted"
+      })
+      .populate("userA", "username displayName avatar status streak")
+      .populate("userB", "username displayName avatar status streak");
 
     if (!relationships || relationships.length === 0) {
       return res.status(200).json({
@@ -29,23 +31,56 @@ const getUsers = async (req, res) => {
             ? relationship.userB
             : relationship.userA;
 
-        // Find conversation between me and this friend
         const conversation = await Conversation.findOne({
+          type: "private",
           participants: {
             $all: [myId, otherUser._id]
           }
-        }).select("updatedAt");
+        })
+          .select("updatedAt lastMessage lastReadAt")
+          .populate("lastMessage");
+
+        console.log(conversation.lastReadAt);
+          
+        const lastReadAt = conversation.lastReadAt.get(
+          otherUser._id.toString()
+        );
+
+        const unreadFilter = {
+          conversationId: conversation._id,
+          senderId: { $ne: myId },
+        };
+
+        if (lastReadAt) {
+          unreadFilter.createdAt = {
+            $gt: lastReadAt,
+          };
+        }
+
+        const unreadCount = await Message.countDocuments(unreadFilter);
+
+        console.log("otheruser : ", otherUser);
 
         return {
           relationshipId: relationship._id,
+
+          // Needed by UserList to identify
+          // which conversation received a new message
+          conversationId: conversation?._id || null,
+
           user: otherUser,
+
           relationType: relationship.relationType,
-          updatedAt: conversation?.updatedAt || null
+
+          updatedAt: conversation?.updatedAt || null,
+
+          lastMessage: conversation?.lastMessage || null,
+
+          unreadCount
         };
       })
     );
 
-    // Most recently updated conversation first
     friends.sort((a, b) => {
       if (!a.updatedAt) return 1;
       if (!b.updatedAt) return -1;
@@ -53,14 +88,14 @@ const getUsers = async (req, res) => {
       return new Date(b.updatedAt) - new Date(a.updatedAt);
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       friends
     });
 
   } catch (error) {
     console.error("Get users error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Server error"
     });
   }

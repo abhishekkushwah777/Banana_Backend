@@ -26,7 +26,7 @@ const conversationSchema = new mongoose.Schema(
         required: true,
       },
     ],
-    
+
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -37,6 +37,11 @@ const conversationSchema = new mongoose.Schema(
       ref: "Message",
       default: null,
     },
+    lastReadAt: {
+      type: Map,
+      of: Date,
+      default: {},
+    }
   },
   {
     timestamps: true,

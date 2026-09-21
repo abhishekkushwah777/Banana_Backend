@@ -34,6 +34,13 @@ const userSchema = new mongoose.Schema(
       type: String,
     },
 
+    xp:{
+      type: Number,
+      default: 100,
+      min: 100,
+      max: 500000,
+    },
+
     status: {
       type: String,
       enum: ["online", "offline"],
